@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, Suspense } from "react";
 import { useQueryState } from "nuqs";
-import { getConfig, saveConfig, StandaloneConfig } from "@/lib/config";
+import { getConfig, saveConfig, StandaloneConfig, isProduction } from "@/lib/config";
 import { ConfigDialog } from "@/app/components/ConfigDialog";
 import { Button } from "@/components/ui/button";
 import { Assistant } from "@langchain/langgraph-sdk";
@@ -136,14 +136,16 @@ function HomePageInner({
               <span className="font-medium">Assistant:</span>{" "}
               {config.assistantId}
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setConfigDialogOpen(true)}
-            >
-              <Settings className="mr-2 h-4 w-4" />
-              Settings
-            </Button>
+            {!isProduction() && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setConfigDialogOpen(true)}
+              >
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"

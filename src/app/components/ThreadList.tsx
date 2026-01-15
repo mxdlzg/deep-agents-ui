@@ -2,9 +2,19 @@
 
 import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { format } from "date-fns";
-import { Loader2, MessageSquare, X } from "lucide-react";
+import { Loader2, MessageSquare, X, Trash2 } from "lucide-react";
 import { useQueryState } from "nuqs";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -20,6 +30,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { ThreadItem } from "@/app/hooks/useThreads";
 import { useThreads } from "@/app/hooks/useThreads";
+import { useClient } from "@/providers/ClientProvider";
 
 type StatusFilter = "all" | "idle" | "busy" | "interrupted" | "error";
 
@@ -123,8 +134,11 @@ export function ThreadList({
   onClose,
   onInterruptCountChange,
 }: ThreadListProps) {
-  const [currentThreadId] = useQueryState("threadId");
+  const [currentThreadId, setCurrentThreadId] = useQueryState("threadId");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [threadToDelete, setThreadToDelete] = useState<string | null>(null);
+  const client = useClient();
 
   const threads = useThreads({
     status: statusFilter === "all" ? undefined : statusFilter,
@@ -206,6 +220,33 @@ export function ThreadList({
     onInterruptCountChange?.(interruptedCount);
   }, [interruptedCount, onInterruptCountChange]);
 
+  const handleDeleteClick = useCallback(
+    (e: React.MouseEvent, threadId: string) => {
+      e.stopPropagation();
+      setThreadToDelete(threadId);
+      setDeleteDialogOpen(true);
+    },
+    []
+  );
+
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!threadToDelete || !client) return;
+
+    try {
+      await client.threads.delete(threadToDelete);
+      setDeleteDialogOpen(false);
+      setThreadToDelete(null);
+      threads.mutate();
+
+      // If deleted thread was current, clear selection
+      if (threadToDelete === currentThreadId) {
+        setCurrentThreadId(null);
+      }
+    } catch (error) {
+      console.error("Failed to delete thread:", error);
+    }
+  }, [threadToDelete, client, threads, currentThreadId, setCurrentThreadId]);
+
   return (
     <div className="absolute inset-0 flex flex-col">
       {/* Header with title, filter, and close button */}
@@ -220,7 +261,7 @@ export function ThreadList({
               <SelectValue />
             </SelectTrigger>
             <SelectContent align="end">
-              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="all">状态</SelectItem>
               <SelectSeparator />
               <SelectGroup>
                 <SelectLabel>Active</SelectLabel>
@@ -297,20 +338,26 @@ export function ThreadList({
                   </h4>
                   <div className="flex flex-col gap-1">
                     {groupThreads.map((thread) => (
-                      <button
+                      <div
                         key={thread.id}
-                        type="button"
-                        onClick={() => onThreadSelect(thread.id)}
                         className={cn(
-                          "grid w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors duration-200",
+                          "group relative grid w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors duration-200",
                           "hover:bg-accent",
                           currentThreadId === thread.id
                             ? "border border-primary bg-accent hover:bg-accent"
                             : "border border-transparent bg-transparent"
                         )}
+                        onClick={() => onThreadSelect(thread.id)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            onThreadSelect(thread.id);
+                          }
+                        }}
                         aria-current={currentThreadId === thread.id}
                       >
-                        <div className="min-w-0 flex-1">
+                        <div className="min-w-0 flex-1 pr-8">
                           {/* Title + Timestamp Row */}
                           <div className="mb-1 flex items-center justify-between">
                             <h3 className="truncate text-sm font-semibold">
@@ -335,7 +382,19 @@ export function ThreadList({
                             </div>
                           </div>
                         </div>
-                      </button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className={cn(
+                            "absolute right-2 top-1/2 h-8 w-8 -translate-y-1/2 flex-shrink-0 opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive",
+                            "group-hover:opacity-100"
+                          )}
+                          onClick={(e) => handleDeleteClick(e, thread.id)}
+                          aria-label="Delete thread"
+                        >
+                          <Trash2 size={14} />
+                        </Button>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -364,6 +423,29 @@ export function ThreadList({
           </div>
         )}
       </ScrollArea>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete conversation?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the
+              conversation and all its messages.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setThreadToDelete(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

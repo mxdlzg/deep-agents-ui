@@ -62,7 +62,7 @@ export function useChat({
           optimisticValues: (prev) => ({
             messages: [...(prev.messages ?? []), newMessage],
           }),
-          config: { ...(activeAssistant?.config ?? {}), recursion_limit: 100 },
+          config: { ...(activeAssistant?.config ?? {}), recursion_limit: 500 },
         }
       );
       // Update thread list immediately when sending a message
@@ -144,6 +144,11 @@ export function useChat({
   const stopStream = useCallback(() => {
     stream.stop();
   }, [stream]);
+
+  // console.log('Stream object:', stream);
+  console.log('Stream messages:', stream.values);
+  // console.log('Stream values:', stream.values);
+
 
   return {
     stream,

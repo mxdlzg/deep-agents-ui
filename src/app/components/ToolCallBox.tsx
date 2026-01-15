@@ -105,8 +105,9 @@ export const ToolCallBox = React.memo<ToolCallBoxProps>(
     return (
       <div
         className={cn(
-          "w-full overflow-hidden rounded-lg border-none shadow-none outline-none transition-colors duration-200 hover:bg-accent",
-          isExpanded && hasContent && "bg-accent"
+          "w-full overflow-hidden rounded-lg border-2 shadow-sm transition-all duration-200",
+          "border-blue-200 bg-blue-50/50 hover:bg-blue-100/60 dark:border-blue-800 dark:bg-blue-950/30 dark:hover:bg-blue-900/40",
+          isExpanded && hasContent && "bg-blue-100/70 dark:bg-blue-900/50"
         )}
       >
         <Button
@@ -114,14 +115,14 @@ export const ToolCallBox = React.memo<ToolCallBoxProps>(
           size="sm"
           onClick={toggleExpanded}
           className={cn(
-            "flex w-full items-center justify-between gap-2 border-none px-2 py-2 text-left shadow-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 disabled:cursor-default"
+            "flex w-full items-center justify-between gap-2 border-none px-3 py-2.5 text-left shadow-none outline-none focus-visible:ring-0 focus-visible:ring-offset-0 disabled:cursor-default hover:bg-transparent"
           )}
           disabled={!hasContent}
         >
           <div className="flex w-full items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              {statusIcon}
-              <span className="text-[15px] font-medium tracking-[-0.6px] text-foreground">
+              <div className="text-blue-600 dark:text-blue-400">{statusIcon}</div>
+              <span className="text-[15px] font-semibold tracking-[-0.6px] text-blue-900 dark:text-blue-100">
                 {name}
               </span>
             </div>
